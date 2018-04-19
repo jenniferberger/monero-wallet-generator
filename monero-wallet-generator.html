@@ -6655,21 +6655,40 @@
         .slider .indicators .indicator-item.active {
             background-color: #4CAF50;
         }
-        .btn-qr {
-            line-height: 25px;
-            height: 25px;
-            font-size: 60%;
-            padding: 0px 1.5rem;
-        }
-        #address_widget, #spend_key_widget, #view_key_widget,
-        #mnemonic_address, #privatekeys_address {
-            font-family: monospace;
-            overflow-wrap: break-word;
-        }
-
-
     </style>
     <style>
+    /**
+     * monero-wallet-generator styles
+     * 2018 jennifer berger: Public Domain
+     * inspired by the inline styles
+     */
+    .btn-qr {
+        line-height: 25px;
+        height: 25px;
+        font-size: 60%;
+        padding: 0px 1.5rem;
+    }
+    .hidden {
+        display: none;
+    }
+    .overlay {
+        z-index: 9999;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #fff;
+    }
+    #address_widget, #spend_key_widget, #view_key_widget,
+    #mnemonic_address, #privatekeys_address {
+        font-family: monospace;
+        overflow-wrap: break-word;
+    }
+    /**
+     * Print style for menore-wallet-generator
+     * 2018 jennifer berger: Public Domain
+     */
     .print-only {
         display: none;
     }
@@ -10763,7 +10782,7 @@ bC0zLjUsMjAuNGgtNkwyNDQuOCwzMTAuNkwyNDQuOCwzMTAuNnoiLz4KPC9nPgo8L3N2Zz4K">
 <div class="row center-align print-only">
     <div class="col s12">
         <h4 style="color: #555;">Offline wallet</h4>
-        <p id="date"></p>
+        <p class="current-iso-datetime"></p>
     </div>
 </div>
 
@@ -10771,61 +10790,91 @@ bC0zLjUsMjAuNGgtNkwyNDQuOCwzMTAuNkwyNDQuOCwzMTAuNnoiLz4KPC9nPgo8L3N2Zz4K">
     <div class="row noprint">
         <div class="col s12">
             <p>
-                This page generates a new
-                <select onchange="js:setCoin(this.selectedIndex);" class="waves-effect waves-light btn" style="max-width: 20%">
-                  <option>Monero</option>
-                  <option>Aeon</option>
-                </select>
-                wallet. It is self contained and
+                This page generates a new Monero wallet. It is self contained and
                 does all the necessary calculations locally, so is suitable for generating a new wallet on a machine
                 that is not connected to the network, and may even never be. This way, you can create
-                a Monero/Aeon wallet without risking the keys. This file is GPG signed, see <a href="#gpg-instructions">GPG instructions</a>.
+                a Monero wallet without risking the keys. This file is GPG signed, see <a href="#gpg-instructions">GPG instructions</a>.
                 You can check for up to date versions of this page
                 <a href="https://github.com/moneromooo-monero/monero-wallet-generator/blob/master/monero-wallet-generator.html">here</a>.
             </p>
+            <p>
+                Be aware that the displayed keys are loaded into browser memory, copied into DOM and converted to images for the QR-codes. Unless you restart the browser / computer you cannot be sure that an other process can access them.
+            </p>
         </div>
     </div>
-    <div class="row valign-wrapper noprint">
-        <div class="col s4 right-align ">
-                <input class="btn orange" type="button" onclick="js:genwallet(null);"
+    <div class="row valign-wrapper noprint gen-basic">
+        <div class="col s12 align-center ">
+                <input class="btn orange" type="button" onclick="js:gen_wallet(null);"
                        value="Generate wallet" id="gen_with_custom_entropy_button" action=""/>
-                <p>Custom entropy for deterministic wallet (leave empty to use the browser's PRNG)</p>
-                <input type="text" value="" id="user_entropy_widget" oninput="js:checkEntropy();" />
-                <div style="color: red; display: none" id="user_entropy_warning_widget">WARNING: entropy is way too low for the wallet to be secure: aim for 256 bits (about a hundred dice throws)</div>
-        </div>
-        <div class="col s1 offset-s1"><h4>or</h4></div>
-        <div class="col s5 offset-s1">
-            <form>
-                <input class="btn deep-orange" type="button" onclick="js:genwallet_prefix();" value="Generate wallet with prefix" action="" id="gen_prefix_widget"/>
-                <p>(very slow for more than a few characters)</p>
-                <input type="text" value="4" id="prefix_widget" oninput="js:check_prefix_validity()"; />
-            </form>
+                <input class="btn silver" type="button" onclick="js:show_advanced_options();"
+                       value="Advanced Options" id="gen_advanced_button" action=""/>
         </div>
     </div>
-    <div class="row center-align noprint">
+    <div class="row valign-wrapper noprint gen-advanced hidden">
+        <div class="col s12 align-center ">
+                <input class="btn silver" type="button" onclick="js:show_basic_options();"
+                       value="Basic Options" id="gen_basic_button" action=""/>
+        </div>
+    </div>
+    <div class="row noprint gen-advanced hidden">
         <div class="col s12">
-            <form>
-                <input class="waves-effect waves-light btn" type="button" onclick="js:genwallet('english');" value="English" action=""/ id=lang_en>
-                <input class="waves-effect waves-light btn" type="button" onclick="js:genwallet('spanish');" value="Spanish" action=""/ id=lang_es>
-                <!-- portuguese word list has a few prefix collisions
-                      <input type="button" onclick="js:genwallet('portuguese');" value="Portuguese" action=""/ id=lang_pt>
-                -->
-                <input class="waves-effect waves-light btn" type="button" onclick="js:genwallet('japanese');" value="Japanese" action=""/ id=lang_jp>
-                <br>
-                <font size="-1">(restoring non English language seeds needs a recent simplewallet)</font>
-            </form>
+            <div class="card light-green lighten-5">
+                <div class="card-content light-green-text text-darken-4">
+                    <span class="card-title light-green-text text-darken-4">
+                        Custom Entropy
+                    </span>
+                    <p>Custom entropy for deterministic wallet (leave empty to use the browser's PRNG)</p>
+                    <input type="text" value="" id="user_entropy_widget" oninput="js:check_entropy();" />
+                    <div style="color: red; display: none" id="user_entropy_warning_widget">WARNING: entropy is way too low for the wallet to be secure: aim for 256 bits (about a hundred dice throws)</div>
+                </div>
+                <div class="card-action center-align">
+                    <input class="btn orange" type="button" onclick="js:gen_wallet(null);"
+                       value="Generate wallet" id="gen_with_custom_entropy_button" action=""/>
+                </div>
+            </div>
         </div>
     </div>
+    <div class="row noprint gen-advanced hidden">
+        <div class="col s12">
+            <div class="card light-green lighten-5">
+                <div class="card-content light-green-text text-darken-4">
+                    <span class="card-title light-green-text text-darken-4">
+                        Custom Prefix
+                    </span>
+                    <p>Custom (case insensitive) prefix for the public address</p>
+                    <p>(very slow for more than a few characters 3: 1s, 4: 60s)</p>
+                </div>
+                <div class="card-action center-align">
+                    <form>
+                        <input type="text" value="4" id="prefix_widget" oninput="js:check_prefix_validity()"; />
+                        <input class="btn deep-orange" type="button" onclick="js:gen_wallet_prefix();" value="Generate wallet with prefix" action="" id="gen_prefix_widget"/>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row noprint">
+        <div class="col s12">
+            <div class="card light-green lighten-5">
+                <div class="card-content light-green-text text-darken-5">
+                    <span class="card-action light-green-text text-darken-5">
+                      The displayed wallet was generated on <span class="current-iso-datetime"></span>.
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col s12">
             <div class="card light-green lighten-5">
                 <div class="card-content light-green-text text-darken-4">
                     <span class="card-title light-green-text text-darken-4">
                       Public address
-                      <input type="button" class="waves-effect waves-light btn btn-qr" onclick="js:toggle_address_qr();" value="Show QR code" action=""id="show_qr_code"/>
+                      <input type="button" class="waves-effect waves-light btn btn-qr" onclick="js:show_qr('public_address');" value="Show QR code" action="" id="show_qr_code"/>
                     </span>
 
-                    <p class="noprint">This is the address you give to third parties to send aeon/monero to you.
+                    <p class="noprint">This is the address you give to third parties to send monero to you.
                         <br><b>It is the only information here that's meant to be public.</b>
                     </p>
                 </div>
@@ -10833,7 +10882,7 @@ bC0zLjUsMjAuNGgtNkwyNDQuOCwzMTAuNkwyNDQuOCwzMTAuNnoiLz4KPC9nPgo8L3N2Zz4K">
                     <span class="center-align" id="address_widget">generating...</span>
                 </div>
                 <div class="card-action center-align">
-                    <span class="qrcode" id="address_qr_widget" onclick="js:toggle_address_qr();"></span>
+                    <span class="qrcode public_address_qr_widget"></span>
                 </div>
             </div>
         </div>
@@ -10850,7 +10899,7 @@ bC0zLjUsMjAuNGgtNkwyNDQuOCwzMTAuNkwyNDQuOCwzMTAuNnoiLz4KPC9nPgo8L3N2Zz4K">
             <div class="card pink lighten-5">
                 <div class="card-content pink-text text-darken-5">
                     <span class="card-title pink-text text-darken-5">Private Mnemonic seed
-                     <input type="button" class="waves-effect waves-light btn btn-qr" onclick="js:toggle_priv_mnemonic_qr();" value="Show QR code" action="" id="show_priv_mnemonic_qr_code"/>
+                     <input type="button" class="waves-effect waves-light btn btn-qr" onclick="js:show_qr('priv_mnemonic');" value="Show QR code" action="" id="show_priv_mnemonic_qr_code"/>
                     </span>
                     <p class="noprint">
                         The mnemonic seed is a string that comprises 24 (Aeon) or 25 (Monero) words and allows you to recreate your
@@ -10860,9 +10909,25 @@ bC0zLjUsMjAuNGgtNkwyNDQuOCwzMTAuNkwyNDQuOCwzMTAuNnoiLz4KPC9nPgo8L3N2Zz4K">
                 </div>
                 <div class="card-action center-align">
                     <h5 class="grey-text text-darken-4" id="mnemonic_widget">Generating... </h5>
-                    <span class="qrcode" id="priv_mnemonic_qr_widget" onclick="js:toggle_priv_mnemonic_qr();"></span>
+                    <span class="qrcode priv_mnemonic_qr_widget"></span>
+                </div>
+                <div class="card-action center-align">
+                    <form>
+                        <input class="waves-effect waves-light btn" type="button" onclick="js:genwallet('english');" value="English" action="" id="lang_en"/>
+                        <input class="waves-effect waves-light btn" type="button" onclick="js:genwallet('spanish');" value="Spanish" action="" id="lang_es"/>
+                        <!-- portuguese word list has a few prefix collisions
+                              <input type="button" onclick="js:genwallet('portuguese');" value="Portuguese" action=""/ id=lang_pt>
+                        -->
+                        <input class="waves-effect waves-light btn" type="button" onclick="js:genwallet('japanese');" value="Japanese" action="" id="lang_jp"/>
+                        <br>
+                        <font size="-1">(restoring non English language seeds needs a recent simplewallet)</font>
+                    </form>
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="row center-align noprint">
+        <div class="col s12">
         </div>
     </div>
     <div class="row print_break_before">
@@ -10883,11 +10948,11 @@ bC0zLjUsMjAuNGgtNkwyNDQuOCwzMTAuNkwyNDQuOCwzMTAuNnoiLz4KPC9nPgo8L3N2Zz4K">
                 <div class="card-action center-align">
                     <div class="row">
                         <div class="col s3">
-                            <span class="label">Spend key:</span>
+                            <span class="label">Spend key</span>
                         </div>
                         <div class="col s9">
                             <span id="spend_key_widget">Generating...</span>
-                            <span class="qrcode" id="priv_spend_qr_widget" onclick="js:toggle_priv_spend_qr();"></span>
+                            <span class="qrcode priv_spend_qr_widget"></span>
                         </div>
                     </div>
                     <div class="row">
@@ -10896,22 +10961,75 @@ bC0zLjUsMjAuNGgtNkwyNDQuOCwzMTAuNkwyNDQuOCwzMTAuNnoiLz4KPC9nPgo8L3N2Zz4K">
                         </div>
                         <div class="col s9">
                             <span id="view_key_widget">Generating...</span>
-                            <span class="qrcode" id="priv_view_qr_widget" onclick="js:toggle_priv_view_qr();"></span>
+                            <span class="qrcode priv_view_qr_widget"></span>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col s6">
-                            <input type="button" class="waves-effect waves-light btn btn-qr" onclick="js:toggle_priv_spend_qr();" value="Show Spend Key as QR code" action="" id="show_priv_spend_qr_code"/>
+                            <input type="button" class="waves-effect waves-light btn btn-qr" onclick="js:show_qr('priv_spend');" value="Show Spend Key as QR code" action="" id="show_priv_spend_qr_code"/>
                         </div>
                         <div class="col s6">
-                            <input type="button" class="waves-effect waves-light btn btn-qr" onclick="js:toggle_priv_view_qr();" value="Show View Key as QR code" action="" id="show_priv_view_qr_code"/>
+                            <input type="button" class="waves-effect waves-light btn btn-qr" onclick="js:show_qr('priv_view');" value="Show View Key as QR code" action="" id="show_priv_view_qr_code"/>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+<!-- this are the overlays for the qr display, they need to be defined after the (printable) .qrcode's -->
+<div class="hiddendiv">
+    <div class="container">
+        <div class="row print_break_before">
+            <div class="col s12">
+                <div class="card indigo lighten-5">
+                    <div class="card-content indigo-text text-darken-4">
+                        <span class="card-title indigo-text text-darken-4">Public Address</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <span class="qrcode public_address_qr_widget"></span>
+    </div>
 
+    <div class="container">
+        <div class="row print_break_before">
+            <div class="col s12">
+                <div class="card indigo lighten-5">
+                    <div class="card-content indigo-text text-darken-4">
+                        <span class="card-title indigo-text text-darken-4">Private Mnemonic Seed</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <span class="qrcode priv_mnemonic_qr_widget"></span>
+    </div>
+
+    <div class="container">
+        <div class="row print_break_before">
+            <div class="col s12">
+                <div class="card indigo lighten-5">
+                    <div class="card-content indigo-text text-darken-4">
+                        <span class="card-title indigo-text text-darken-4">Private Spend Key</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <span class="qrcode priv_spend_qr_widget"></span>
+    </div>
+
+    <div class="container">
+        <div class="row print_break_before">
+            <div class="col s12">
+                <div class="card indigo lighten-5">
+                    <div class="card-content indigo-text text-darken-4">
+                        <span class="card-title indigo-text text-darken-4">Private View Key</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <span class="qrcode priv_view_qr_widget"></span>
+    </div>
+</div>
 <div class="row noprint">&nbsp;</div>
 <footer class="page-footer grey lighten-3 grey-text text-darken-4 noprint">
     <div class="container">
@@ -11026,167 +11144,161 @@ place any email address in a new GPG key, so the right email being shown is no g
 
 <script>
 window.onbeforeunload = function(e) {
-    return '';
+     return '';
 };
-function poor_mans_kdf(str)
+
+var wallet = function() {
+    this.current_lang='english';
+    this.keys = null;
+    this.seed = null;
+
+    this.generating = false;
+    this.previous_button_text = "";
+    this.prefix = "";
+
+    this.iso_datetime = new Date().toISOString();
+    this.iso_date = this.iso_datetime.substr(0, 10);
+}
+
+wallet.prototype.poor_mans_kdf = function(str)
 {
   var hex = cnBase58.bintohex(cnBase58.strtobin(str));
   for (var n = 0; n < 10000; ++n)
     hex = keccak_256(cnBase58.hextobin(hex));
   return hex;
 }
-current_lang='english';
-keys = null;
-function genwallet(lang)
+
+wallet.prototype.reset_keys = function()
 {
-  if(keys && !confirm('Are you sure? This wallet cannot be recovered once a new wallet is generated.')) {
-    return;
+  if(this.keys === null){
+    this.seed = null;
+    return true;
   }
+  message = 'Generate new Wallet.\n' +
+    'Are you sure?\n' +
+    'The current displayed wallet cannot be recovered' +
+    ' once a new wallet is generated.'
+  if (confirm(message)) {
+    this.keys = null;
+    this.seed = null;
+    return true;
+  }
+  return false;
+}
+
+wallet.prototype.gen = function(lang)
+{
+  if (!this.reset_keys()) {
+    return
+  }
+  user_entropy_widget = document.getElementById("user_entropy_widget")
+  var user_entropy = user_entropy_widget.value;
+  if (user_entropy === "") {
+    this.seed = cnUtil.sc_reduce32(cnUtil.rand_32());
+  }
+  else {
+    this.seed = cnUtil.sc_reduce32(this.poor_mans_kdf(user_entropy));
+  }
+  this.keys = cnUtil.create_address(this.seed);
+  this.iso_datetime = new Date().toISOString();
+  this.iso_date = this.iso_datetime.substr(0, 10);
+
+  this.show(lang);
+}
+
+wallet.prototype.show = function(lang)
+{
   spend_key_widget = document.getElementById("spend_key_widget");
   view_key_widget = document.getElementById("view_key_widget");
   address_widget = document.getElementById("address_widget");
-  address_qr_widget = document.getElementById("address_qr_widget");
-  priv_mnemonic_qr_widget = document.getElementById("priv_mnemonic_qr_widget");
-  priv_spend_qr_widget = document.getElementById("priv_spend_qr_widget");
-  priv_view_qr_widget = document.getElementById("priv_view_qr_widget");
+  public_address_qr_widgets = document.getElementsByClassName("public_address_qr_widget");
+  priv_mnemonic_qr_widgets = document.getElementsByClassName("priv_mnemonic_qr_widget");
+  priv_spend_qr_widgets = document.getElementsByClassName("priv_spend_qr_widget");
+  priv_view_qr_widgets = document.getElementsByClassName("priv_view_qr_widget");
   privatekeys_address = document.getElementById("privatekeys_address");
   mnemonic_widget = document.getElementById("mnemonic_widget");
   mnemonic_address = document.getElementById("mnemonic_address");
-  user_entropy_widget = document.getElementById("user_entropy_widget")
-  date_widget = document.getElementById("date");
 
-  date_widget.innerHTML = new Date().toISOString();
-  iso_date = new Date().toISOString().substr(0, 10);
+  datetime_widgets = document.querySelectorAll(".current-iso-datetime");
 
   if (lang!=null) {
-    current_lang = lang;
+    this.current_lang = lang;
   }
-  else {
-    var user_entropy = user_entropy_widget.value;
-    if (user_entropy === "") {
-      seed = cnUtil.sc_reduce32(cnUtil.rand_32());
-    }
-    else {
-      seed = cnUtil.sc_reduce32(poor_mans_kdf(user_entropy));
-    }
-    keys = cnUtil.create_address(seed);
-  }
-  mnemonic = mn_encode(seed,current_lang);
+  mnemonic = mn_encode(this.seed,this.current_lang);
 
-  spend_key_widget.innerHTML = keys.spend.sec;
-  view_key_widget.innerHTML = keys.view.sec;
-  address_widget.innerHTML = cnUtil.pubkeys_to_string(keys.spend.pub, keys.view.pub);
+  spend_key_widget.innerHTML = this.keys.spend.sec;
+  view_key_widget.innerHTML = this.keys.view.sec;
+  address_widget.innerHTML = cnUtil.pubkeys_to_string(this.keys.spend.pub, this.keys.view.pub);
   mnemonic_address.innerHTML = address_widget.innerHTML;
   privatekeys_address.innerHTML = address_widget.innerHTML;
-  address_qr_widget.innerHTML = "";
-  priv_mnemonic_qr_widget.innerHTML = "";
-  priv_spend_qr_widget.innerHTML = "";
-  priv_view_qr_widget.innerHTML = "";
   mnemonic_widget.innerHTML = mnemonic;
 
-  // only monero has the URI scheme
-  if (prefix_widget.value == "4") {
-    qr=new QRCode(address_qr_widget, {correctLevel:QRCode.CorrectLevel.L});
-    qr.makeCode("monero:"+keys.public_addr);
-    qr_priv_mnemonic=new QRCode(priv_mnemonic_qr_widget, {correctLevel:QRCode.CorrectLevel.L});
-    qr_priv_mnemonic.makeCode(
-        "monero_wallet:"+keys.public_addr+
-        "?mnemonic_seed="+encodeURIComponent(mnemonic)+
-        "&iso_date="+iso_date);
-    qr_priv_spend=new QRCode(priv_spend_qr_widget, {correctLevel:QRCode.CorrectLevel.L});
-    qr_priv_spend.makeCode(
-        "monero_wallet:"+keys.public_addr+
-        "?spend_key="+keys.spend.sec+
-        "&iso_date="+iso_date);
-    qr_priv_view=new QRCode(priv_view_qr_widget, {correctLevel:QRCode.CorrectLevel.L});
-    qr_priv_view.makeCode(
-        "monero_wallet:"+keys.public_addr+
-        "?view_key="+keys.view.sec+
-        "&iso_date="+iso_date);
-  }
-  else {
-    qr = null;
-    qr_priv_mnemonic = null;
-    qr_priv_spend = null;
-    qr_priv_view = null;
-  }
+  datetime_widgets.forEach(function(widget){
+    widget.innerHTML = this.iso_datetime;
+  });
+
+  this.qr_views(public_address_qr_widgets,
+      "monero:"+this.keys.public_addr);
+  this.qr_views(priv_mnemonic_qr_widgets,
+      "monero_wallet:"+this.keys.public_addr+
+      "?mnemonic_seed="+encodeURIComponent(mnemonic)+
+      "&iso_date="+this.iso_date);
+  this.qr_views(priv_spend_qr_widgets,
+      "monero_wallet:"+this.keys.public_addr+
+      "?spend_key="+this.keys.spend.sec+
+      "&iso_date="+this.iso_date);
+  this.qr_views(priv_view_qr_widgets,
+      "monero_wallet:"+this.keys.public_addr+
+      "?view_key="+this.keys.view.sec+
+      "&iso_date="+this.iso_date);
+}
+wallet.prototype.qr_views = function(widgets, url)
+{
+    if (typeof widgets !== 'object') {
+        return;
+    }
+    for (var i = 0; i < widgets.length; i++) {
+        var widget = widgets[i];
+      widget.innerHTML = ''
+      qr_priv_view=new QRCode(widget, {correctLevel:QRCode.CorrectLevel.L});
+      qr_priv_view.makeCode(url);
+    }
 }
 
-previous_button_text = "";
-prefix = "";
-function genwallet_prefix_worker()
+wallet.prototype.gen_prefix_worker = function()
 {
   attempts = 0;
   while (true) {
     attempts++;
-    seed = cnUtil.sc_reduce32(cnUtil.rand_32());
-    keys = cnUtil.create_address_if_prefix(seed,prefix);
-    if (keys != null) {
+    this.seed = cnUtil.sc_reduce32(cnUtil.rand_32());
+    this.keys = cnUtil.create_address_if_prefix(this.seed,this.prefix);
+    if (this.keys != null) {
       gen_prefix_widget = document.getElementById("gen_prefix_widget");
       prefix_widget = document.getElementById("prefix_widget");
-      gen_prefix_widget.value = previous_button_text;
+      gen_prefix_widget.value = this.previous_button_text;
       prefix_widget.disabled = false;
-      generating = false;
+      this.generating = false;
       break;
     }
     if (attempts == 10) {
-      if (generating)
-        setTimeout(genwallet_prefix_worker, 0);
+      if (this.generating)
+        var self = this;
+        setTimeout(function(){
+            self.gen_prefix_worker()
+        }, 0);
       return;
     }
   }
-  mnemonic = mn_encode(seed,current_lang);
-
-  spend_key_widget = document.getElementById("spend_key_widget");
-  view_key_widget = document.getElementById("view_key_widget");
-  address_widget = document.getElementById("address_widget");
-  address_qr_widget = document.getElementById("address_qr_widget");
-  priv_mnemonic_qr_widget = document.getElementById("priv_mnemonic_qr_widget");
-  priv_spend_qr_widget = document.getElementById("priv_spend_qr_widget");
-  priv_view_qr_widget = document.getElementById("priv_view_qr_widget");
-  privatekeys_address = document.getElementById("privatekeys_address");
-  mnemonic_widget = document.getElementById("mnemonic_widget");
-  mnemonic_address = document.getElementById("mnemonic_address");
-  date_widget = document.getElementById("date");
-
-  date_widget.innerHTML = new Date().toISOString();
-  iso_date = new Date().toISOString().substr(0, 10);
-
-  spend_key_widget.innerHTML = keys.spend.sec;
-  view_key_widget.innerHTML = keys.view.sec;
-  address_widget.innerHTML = keys.public_addr;
-  mnemonic_address.innerHTML = address_widget.innerHTML;
-  privatekeys_address.innerHTML = address_widget.innerHTML;
-  address_qr_widget.innerHTML = "";
-  priv_mnemonic_qr_widget.innerHTML = "";
-  priv_spend_qr_widget.innerHTML = "";
-  priv_view_qr_widget.innerHTML = "";
-  mnemonic_widget.innerHTML = mnemonic;
-
-  qr=new QRCode(address_qr_widget, {correctLevel:QRCode.CorrectLevel.L});
-  qr.makeCode("monero:"+keys.public_addr);
-  qr_priv_mnemonic=new QRCode(priv_mnemonic_qr_widget, {correctLevel:QRCode.CorrectLevel.L});
-  qr_priv_mnemonic.makeCode(
-    "monero_wallet:"+keys.public_addr+
-    "?mnemonic_seed="+encodeURIComponent(mnemonic)+
-    "&iso_date="+iso_date);
-  qr_priv_spend=new QRCode(priv_spend_qr_widget, {correctLevel:QRCode.CorrectLevel.L});
-  qr_priv_spend.makeCode(
-    "monero_wallet:"+keys.public_addr+
-    "?spend_key="+keys.spend.sec+
-    "&iso_date="+iso_date);
-  qr_priv_view=new QRCode(priv_view_qr_widget, {correctLevel:QRCode.CorrectLevel.L});
-  qr_priv_view.makeCode(
-    "monero_wallet:"+keys.public_addr+
-    "?view_key="+keys.view.sec+
-    "&iso_date="+iso_date);
+  this.iso_datetime = new Date().toISOString();
+  this.iso_date = this.iso_datetime.substr(0, 10);
+  this.show();
 }
 
-var zerohex="0000000000000000000000000000000000000000000000000000000000000000";
-var ffhex="ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
 
-function is_valid_prefix(prefix)
+wallet.prototype.is_valid_prefix = function(prefix)
 {
+  var zerohex="0000000000000000000000000000000000000000000000000000000000000000";
+  var ffhex="ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
   if (prefix.length <= 0 || prefix.length >= 95)
     return false;
   var lowest_address=cnUtil.pubkeys_to_string(zerohex,zerohex);
@@ -11200,6 +11312,55 @@ function is_valid_prefix(prefix)
   return true;
 }
 
+wallet.prototype.gen_prefix = function()
+{
+  gen_prefix_widget = document.getElementById("gen_prefix_widget");
+  prefix_widget = document.getElementById("prefix_widget");
+  if (this.generating) {
+    this.generating = false;
+    gen_prefix_widget.value = this.previous_button_text;
+    prefix_widget.disabled = false;
+  }
+  else {
+    prefix_widget = document.getElementById("prefix_widget");
+    this.prefix = prefix_widget.value;
+    this.prefix.trim();
+    if (this.prefix.length < 2) {
+      alert("Bad prefix should be at least two characters");
+      return;
+    }
+    if (!this.is_valid_prefix(this.prefix)) {
+      alert("Bad prefix "+this.prefix+" is not a valid address prefix");
+      return;
+    }
+    if (!this.reset_keys()) {
+      return
+    }
+
+    this.generating = true;
+    this.previous_button_text = gen_prefix_widget.value;
+    gen_prefix_widget.value = "STOP";
+    prefix_widget.disabled = true;
+    var self = this;
+    setTimeout(function(){
+        self.gen_prefix_worker();
+    }, 0);
+  }
+}
+w = new wallet();
+w.gen();
+
+var gen_wallet = function(lang)
+{
+    w.gen(lang);
+}
+
+var gen_wallet_prefix = function(lang)
+{
+    w.gen_prefix();
+}
+
+
 function check_prefix_validity()
 {
   gen_prefix_widget = document.getElementById("gen_prefix_widget");
@@ -11207,7 +11368,7 @@ function check_prefix_validity()
   if (gen_prefix_widget.value == "STOP")
     return;
   prefix=prefix_widget.value;
-  if (is_valid_prefix(prefix)) {
+  if (w.is_valid_prefix(prefix)) {
     gen_prefix_widget.value = "Generate wallet with prefix";
     gen_prefix_widget.disabled = false;
   }
@@ -11217,38 +11378,7 @@ function check_prefix_validity()
   }
 }
 
-generating = false;
-function genwallet_prefix()
-{
-  gen_prefix_widget = document.getElementById("gen_prefix_widget");
-  prefix_widget = document.getElementById("prefix_widget");
-  if (generating) {
-    generating = false;
-    gen_prefix_widget.value = previous_button_text;
-    prefix_widget.disabled = false;
-  }
-  else {
-    prefix_widget = document.getElementById("prefix_widget");
-    prefix = prefix_widget.value;
-    prefix.trim();
-    if (prefix.length < 2) {
-      alert("Bad prefix should be at least two characters");
-      return;
-    }
-    if (!is_valid_prefix(prefix)) {
-      alert("Bad prefix "+prefix+" is not a valid address prefix");
-      return;
-    }
-
-    generating = true;
-    previous_button_text = gen_prefix_widget.value;
-    gen_prefix_widget.value = "STOP";
-    prefix_widget.disabled = true;
-    setTimeout(genwallet_prefix_worker, 0);
-  }
-}
-
-function checkEntropy()
+function check_entropy()
 {
   var good = true;
   var button = document.getElementById("gen_with_custom_entropy_button")
@@ -11282,162 +11412,98 @@ function checkEntropy()
     user_entropy_warning_widget.style.display = "block"
 }
 
-function hide_qr()
+/**
+ * class for hiding and restoring the qr-code view
+ * ensures that no other (key) content is visible when the qr is visible
+ */
+function qr_overlay()
 {
-  address_qr_widget = document.getElementById("address_qr_widget");
-  priv_mnemonic_qr_widget = document.getElementById("priv_mnemonic_qr_widget");
-  priv_spend_qr_widget = document.getElementById("priv_spend_qr_widget");
-  priv_view_qr_widget = document.getElementById("priv_view_qr_widget");
-  spend_key_widget = document.getElementById("spend_key_widget");
-  view_key_widget = document.getElementById("view_key_widget");
-  mnemonic_widget = document.getElementById("mnemonic_widget");
+  this.qr_map = {
+    "public_address": "public_address_qr_widget",
+    "priv_mnemonic": "priv_mnemonic_qr_widget",
+    "priv_spend": "priv_spend_qr_widget",
+    "priv_view": "priv_view_qr_widget"
+  };
 
-  address_qr_widget.style.display = "none";
-  priv_mnemonic_qr_widget.style.display = "none";
-  priv_spend_qr_widget.style.display = "none";
-  priv_view_qr_widget.style.display = "none";
-  spend_key_widget.style.display = "block";
-  view_key_widget.style.display = "block";
-  mnemonic_widget.style.display = "block";
+  this.spend_key_widget = document.getElementById("spend_key_widget");
+  this.view_key_widget = document.getElementById("view_key_widget");
+  this.mnemonic_widget = document.getElementById("mnemonic_widget");
 }
 
-function toggle_address_qr()
+qr_overlay.prototype.restore = function()
 {
-  address_qr_widget = document.getElementById("address_qr_widget");
-  priv_mnemonic_qr_widget = document.getElementById("priv_mnemonic_qr_widget");
-  priv_spend_qr_widget = document.getElementById("priv_spend_qr_widget");
-  priv_view_qr_widget = document.getElementById("priv_view_qr_widget");
-  spend_key_widget = document.getElementById("spend_key_widget");
-  view_key_widget = document.getElementById("view_key_widget");
-  mnemonic_widget = document.getElementById("mnemonic_widget");
-  if (address_qr_widget.style.display=="block") {
-    hide_qr();
+  if (typeof this.qr_view !== 'undefined'){
+    this.qr_view.parentNode.removeChild(this.qr_view);
   }
-  else {
-    address_qr_widget.style.display = "block";
-    priv_mnemonic_qr_widget.style.display = "none";
-    priv_spend_qr_widget.style.display = "none";
-    priv_view_qr_widget.style.display = "none";
-    spend_key_widget.style.display = "none";
-    view_key_widget.style.display = "none";
-    mnemonic_widget.style.display = "none";
-  }
+
+  this.spend_key_widget.style.display = "block";
+  this.view_key_widget.style.display = "block";
+  this.mnemonic_widget.style.display = "block";
 }
 
-function toggle_priv_mnemonic_qr()
+qr_overlay.prototype._prepare_qr_view = function()
 {
-  address_qr_widget = document.getElementById("address_qr_widget");
-  priv_mnemonic_qr_widget = document.getElementById("priv_mnemonic_qr_widget");
-  priv_spend_qr_widget = document.getElementById("priv_spend_qr_widget");
-  priv_view_qr_widget = document.getElementById("priv_view_qr_widget");
-  spend_key_widget = document.getElementById("spend_key_widget");
-  view_key_widget = document.getElementById("view_key_widget");
-  mnemonic_widget = document.getElementById("mnemonic_widget");
-  if (priv_mnemonic_qr_widget.style.display=="block") {
-    hide_qr();
-  }
-  else {
-    address_qr_widget.style.display = "none";
-    priv_mnemonic_qr_widget.style.display = "block";
-    priv_spend_qr_widget.style.display = "none";
-    priv_view_qr_widget.style.display = "none";
-    spend_key_widget.style.display = "none";
-    view_key_widget.style.display = "none";
-    mnemonic_widget.style.display = "none";
-  }
+    this.spend_key_widget.style.display = "none";
+    this.view_key_widget.style.display = "none";
+    this.mnemonic_widget.style.display = "none";
 }
 
-function toggle_priv_spend_qr()
+qr_overlay.prototype.show = function(widget)
 {
-  address_qr_widget = document.getElementById("address_qr_widget");
-  priv_mnemonic_qr_widget = document.getElementById("priv_mnemonic_qr_widget");
-  priv_spend_qr_widget = document.getElementById("priv_spend_qr_widget");
-  priv_view_qr_widget = document.getElementById("priv_view_qr_widget");
-  spend_key_widget = document.getElementById("spend_key_widget");
-  view_key_widget = document.getElementById("view_key_widget");
-  mnemonic_widget = document.getElementById("mnemonic_widget");
-  if (priv_spend_qr_widget.style.display=="block") {
-    hide_qr();
-  }
-  else {
-    address_qr_widget.style.display = "none";
-    priv_mnemonic_qr_widget.style.display = "none";
-    priv_spend_qr_widget.style.display = "block";
-    priv_view_qr_widget.style.display = "none";
-    spend_key_widget.style.display = "none";
-    view_key_widget.style.display = "none";
-    mnemonic_widget.style.display = "none";
-  }
+    this._prepare_qr_view();
+    var qrs = document.getElementsByClassName(this.qr_map[widget]);
+    var qrc = qrs[0].cloneNode(true);
+    var qrtc = document.createElement('h1')
+    var body = document.getElementsByTagName('body')[0];
+    qrc.style.display = 'block';
+    qrtc.innerHTML = qrc.title
+    this.qr_view = document.createElement('div')
+    this.qr_view.appendChild(qrs[1].parentNode.cloneNode(true));
+    this.qr_view.appendChild(qrc);
+    this.qr_view.className = 'overlay';
+    body.appendChild(this.qr_view);
+    qrc.addEventListener('click', restore_qr);
 }
 
-function toggle_priv_view_qr()
-{
-  address_qr_widget = document.getElementById("address_qr_widget");
-  priv_mnemonic_qr_widget = document.getElementById("priv_mnemonic_qr_widget");
-  priv_spend_qr_widget = document.getElementById("priv_spend_qr_widget");
-  priv_view_qr_widget = document.getElementById("priv_view_qr_widget");
-  spend_key_widget = document.getElementById("spend_key_widget");
-  view_key_widget = document.getElementById("view_key_widget");
-  mnemonic_widget = document.getElementById("mnemonic_widget");
-  if (priv_view_qr_widget.style.display=="block") {
-    hide_qr();
-  }
-  else {
-    address_qr_widget.style.display = "none";
-    priv_mnemonic_qr_widget.style.display = "none";
-    priv_spend_qr_widget.style.display = "none";
-    priv_view_qr_widget.style.display = "block";
-    spend_key_widget.style.display = "none";
-    view_key_widget.style.display = "none";
-    mnemonic_widget.style.display = "none";
-  }
+q = new qr_overlay();
+
+var show_qr = function(widget){
+    q.show(widget);
+}
+var restore_qr = function(){
+    q.restore();
 }
 
-function enableElement(id, enable)
+/**
+ * advanced / basic switch
+ * basic removes user-entropy
+ */
+
+var show_advanced_options = function()
 {
-  var el = document.getElementById(id)
-  if (el) {
-    if (enable)
-      el.disabled = false;
-    else
-      el.disabled = true;
-  }
+    var basic = document.querySelectorAll('.gen-basic');
+    basic.forEach(function(widget){
+        widget.style.display = 'none';
+    });
+    var advanced = document.querySelectorAll('.gen-advanced');
+    advanced.forEach(function(widget){
+        widget.style.display = 'block';
+    });
 }
 
-function enableLanguage(code, enable)
+var show_basic_options = function()
 {
-  enableElement("lang_" + code, enable)
+    var basic = document.querySelectorAll('.gen-basic');
+    basic.forEach(function(widget){
+        widget.style.display = 'block';
+    });
+    var advanced = document.querySelectorAll('.gen-advanced');
+    advanced.forEach(function(widget){
+        widget.style.display = 'none';
+    });
+    var user_entropy_widget = document.getElementById('user_entropy_widget');
+    user_entropy_widget.value = '';
 }
-
-function setCoin(index)
-{
-  var enable
-  var language
-  prefix_widget = document.getElementById("prefix_widget");
-  if (index == 0) {
-    cnUtil = cnUtilGen(moneroConfig);
-    prefix_widget.value = "4";
-    enable = true
-    language = "english"
-  }
-  else if (index == 1) {
-    cnUtil = cnUtilGen(aeonConfig);
-    prefix_widget.value = "W";
-    enable = false
-    language = "electrum"
-  }
-  enableLanguage("en", enable)
-  enableLanguage("es", enable)
-  enableLanguage("pt", enable)
-  enableLanguage("jp", enable)
-  enableElement("show_qr_code", enable)
-  enableElement("show_priv_mnemonic_qr_code", enable)
-  enableElement("show_priv_spend_qr_code", enable)
-  enableElement("show_priv_view_qr_code", enable)
-  genwallet(language);
-}
-
-genwallet();
 </script>
 
 </body>
